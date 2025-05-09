@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+  influxdb:
+    image: influxdb:1.8
+    container_name: mon_influxdb  # Nom personnalisé pour le conteneur InfluxDB
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb:rw
+    environment:
+      - INFLUXDB_DB=weather
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+    networks:
+      - my_network
+    restart: always
+
+  telegraf:
+    image: telegraf:1.19
+    container_name: mon_telegraf  # Nom personnalisé pour le conteneur Telegraf
+    depends_on:
+      - influxdb
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro  # Assurez-vous que le fichier telegraf.conf existe à cet emplacement
+    environment:
+      - APP_ID=${APP_ID}
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_DB=weather
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+    restart: always
+    networks:
+      - my_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mon_grafana  # Nom personnalisé pour le conteneur Grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Mot de passe admin Grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - influxdb
+    restart: always
+    networks:
+      - my_network
+
+volumes:
+  influxdb_data: {}  # Déclaration explicite du volume pour InfluxDB
+  grafana_data: {}   # Déclaration explicite du volume pour Grafana
+
+networks:
+  my_network:
+    driver: bridge
